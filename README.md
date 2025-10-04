@@ -61,19 +61,19 @@ Aangemaakt als `AD-Project` met IPv4-prefix `192.168.10.0/24` (DHCP ingeschakeld
 
 ## 🚀 Projectstappen
 
-### **Stap 1 – Opzetten van de virtuele machines**
+### ## Stap 1 – Opzetten van de virtuele machines
 1. Installeer VirtualBox 7.x.  
-2. Maak de volgende VMs aan:  
+2. Maak de volgende VMs aan:
    - **Windows 10** – 1 CPU, 4 GB RAM, 50 GB disk  
    - **Windows Server 2022** – 1 CPU, 4 GB RAM, 50 GB disk  
    - **Ubuntu Server (Splunk)** – 2 CPU’s, 8 GB RAM, 100 GB disk  
    - **Kali Linux** – geïmporteerde OVA-file  
 
-📸 *Ref 2: Screenshots van de VM-configuratie*  
+📸 *Ref 2: Screenshots van de VM-configuratie*
 
 ---
 
-### **Stap 2 – Installatie en configuratie van Splunk**
+### ## Stap 2 – Installatie en configuratie van Splunk
 1. Installeer **Ubuntu Server 22.04**.  
 2. Geef een statisch IP-adres (`192.168.10.10`) in het netplan-bestand.  
 3. Installeer Splunk Enterprise (`.deb`-pakket).  
@@ -81,15 +81,15 @@ Aangemaakt als `AD-Project` met IPv4-prefix `192.168.10.0/24` (DHCP ingeschakeld
 5. Maak een nieuwe **index** aan met de naam `endpoint`.  
 6. Activeer poort `9997` onder *Settings → Forwarding & Receiving → Configure Receiving*.  
 
-📸 *Ref 3: Splunk Web interface met index configuratie*  
+📸 *Ref 3: Splunk Web interface met index configuratie*
 
 ---
 
-### **Stap 3 – Installatie Sysmon en Universal Forwarder**
-1. Download **Sysmon** van Sysinternals en de **Olaf Hartong config** (`sysmonconfig.xml`).  
-2. Installeer Sysmon:  
-   ```bash
-   sysmon64.exe -i sysmonconfig.xml
+### ## Stap 3 – Installatie Sysmon en Universal Forwarder
+1. Download **Sysmon** (Sysinternals) en de **Olaf Hartong config** (`sysmonconfig.xml`).  
+2. Installeer Sysmon:
+```powershell
+.\sysmon64.exe -i .\sysmonconfig.xml
 Installeer Splunk Universal Forwarder op zowel de server als het target.
 
 Voeg een inputs.conf-bestand toe in:
@@ -106,27 +106,30 @@ host = TARGET-PC
 
 [WinEventLog:Application]
 index = endpoint
+
 [WinEventLog:Security]
 index = endpoint
+
 [WinEventLog:System]
 index = endpoint
+
 [WinEventLog:Microsoft-Windows-Sysmon/Operational]
 index = endpoint
 Start de Splunk Forwarder Service opnieuw.
 
 📸 Ref 4: Voorbeeld van logs zichtbaar in Splunk (index=endpoint)
 
-Stap 4 – Configuratie van Active Directory
-Stel op de Windows Server een statisch IP-adres in (192.168.10.7).
+## Stap 4 – Configuratie van Active Directory
+Stel op de Windows Server een statisch IP-adres in: 192.168.10.7.
 
 Installeer Active Directory Domain Services (AD DS) via Server Manager.
 
 Promoot de server tot Domain Controller met domein:
 
-lua
+text
 Code kopiëren
 mydfir.local
-Maak in Active Directory Users and Computers:
+Maak in Active Directory Users and Computers de volgende objecten:
 
 OU IT → Gebruiker Jenny Smith (JSmith)
 
@@ -136,8 +139,8 @@ Voeg de Windows 10-client toe aan het domein mydfir.local.
 
 📸 Ref 5: Domeincontroller met gebruikers en OUs zichtbaar
 
-Stap 5 – Aanvalssimulatie met Kali Linux
-Stel een statisch IP-adres in (192.168.10.250).
+## Stap 5 – Aanvalssimulatie met Kali Linux
+Stel een statisch IP-adres in: 192.168.10.250.
 
 Installeer Crowbar:
 
@@ -156,7 +159,7 @@ Bekijk in Splunk:
 spl
 Code kopiëren
 index=endpoint TSmith
-→ Controleer event IDs:
+Controleer event IDs:
 
 4625 → Mislukte logins
 
@@ -164,7 +167,7 @@ index=endpoint TSmith
 
 📸 Ref 6: Splunk resultaten – EventID 4625 & 4624 zichtbaar
 
-Stap 6 – Atomic Red Team (ATT&CK-simulatie)
+## Stap 6 – Atomic Red Team (ATT&CK-simulatie)
 Open PowerShell als Administrator:
 
 powershell
@@ -192,7 +195,6 @@ index=endpoint "new local user"
 
 🧾 Samenvatting
 ✅ Voltooide onderdelen:
-
 Volledige labomgeving met 4 virtuele machines
 
 Actieve AD-domeinstructuur
@@ -201,7 +203,4 @@ Splunk ingest met Sysmon + Windows Event Logs
 
 Aanvalsdetectie via RDP brute force
 
-Atomic Red Team getest tegen MITRE ATT&CK
-
-💡 Belangrijkste leerpunt:
-Door de aanval uit te voeren en de logs in Splunk te analyseren, leer je niet alleen wat er gebeurt, maar ook hoe en waarom — de essentie van moderne cybersecurity-detectie.
+Atomic Red Team tests en zichtbaarheidstests
