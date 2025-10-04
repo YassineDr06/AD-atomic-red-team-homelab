@@ -61,146 +61,77 @@ Aangemaakt als `AD-Project` met IPv4-prefix `192.168.10.0/24` (DHCP ingeschakeld
 
 ## 🚀 Projectstappen
 
-### ## Stap 1 – Opzetten van de virtuele machines
-1. Installeer VirtualBox 7.x.  
-2. Maak de volgende VMs aan:
-   - **Windows 10** – 1 CPU, 4 GB RAM, 50 GB disk  
-   - **Windows Server 2022** – 1 CPU, 4 GB RAM, 50 GB disk  
-   - **Ubuntu Server (Splunk)** – 2 CPU’s, 8 GB RAM, 100 GB disk  
-   - **Kali Linux** – geïmporteerde OVA-file  
+## Stap 1 – VMs aanmaken
+- Installeer VirtualBox 7.x.  
+- Maak VMs:
+  - **Windows 10** — 1 CPU, 4 GB, 50 GB  
+  - **Windows Server 2022** — 1 CPU, 4 GB, 50 GB  
+  - **Ubuntu (Splunk)** — 2 CPU, 8 GB, 100 GB  
+  - **Kali Linux** — OVA import
 
-📸 *Ref 2: Screenshots van de VM-configuratie*
+## Stap 2 – Splunk installeren
+- Installeer Ubuntu Server 22.04 en geef statisch IP `192.168.10.10`.  
+- Installeer Splunk (`.deb`) en open `http://192.168.10.10:8000`.  
+- Maak index `endpoint` aan en activeer receiving op poort `9997`.  
 
----
-
-### ## Stap 2 – Installatie en configuratie van Splunk
-1. Installeer **Ubuntu Server 22.04**.  
-2. Geef een statisch IP-adres (`192.168.10.10`) in het netplan-bestand.  
-3. Installeer Splunk Enterprise (`.deb`-pakket).  
-4. Start Splunk en log in op `http://192.168.10.10:8000`.  
-5. Maak een nieuwe **index** aan met de naam `endpoint`.  
-6. Activeer poort `9997` onder *Settings → Forwarding & Receiving → Configure Receiving*.  
-
-📸 *Ref 3: Splunk Web interface met index configuratie*
-
----
-
-### ## Stap 3 – Installatie Sysmon en Universal Forwarder
-1. Download **Sysmon** (Sysinternals) en de **Olaf Hartong config** (`sysmonconfig.xml`).  
-2. Installeer Sysmon:
-```powershell
-.\sysmon64.exe -i .\sysmonconfig.xml
-Installeer Splunk Universal Forwarder op zowel de server als het target.
-
-Voeg een inputs.conf-bestand toe in:
-
-perl
-Code kopiëren
-C:\Program Files\SplunkUniversalForwarder\etc\system\local\
-met de volgende inhoud:
-
-ini
-Code kopiëren
+## Stap 3 – Sysmon & Forwarder
+- Installeer Sysmon met `sysmon64.exe -i sysmonconfig.xml`.  
+- Installeer Splunk Universal Forwarder op server en target.  
+- Plaats `inputs.conf` in `C:\Program Files\SplunkUniversalForwarder\etc\system\local\`:
+- 
 [default]
 host = TARGET-PC
 
 [WinEventLog:Application]
 index = endpoint
-
 [WinEventLog:Security]
 index = endpoint
-
 [WinEventLog:System]
 index = endpoint
-
 [WinEventLog:Microsoft-Windows-Sysmon/Operational]
 index = endpoint
-Start de Splunk Forwarder Service opnieuw.
+Herstart Splunk Forwarder.
 
-📸 Ref 4: Voorbeeld van logs zichtbaar in Splunk (index=endpoint)
+## Stap 4 – Active Directory
+1: Stel DC IP in op 192.168.10.7.
+2: Installeer AD DS en promoteer naar domain controller mydfir.local.
+3: Maak OUs/users: IT\JSmith, HR\TSmith.
+4: Voeg in Windows 10 aan domein.
 
-## Stap 4 – Configuratie van Active Directory
-Stel op de Windows Server een statisch IP-adres in: 192.168.10.7.
+## Stap 5 – RDP brute-force (Kali)
+1: Stel Kali IP in: 192.168.10.250.
+2: Installeer Crowbar:
 
-Installeer Active Directory Domain Services (AD DS) via Server Manager.
-
-Promoot de server tot Domain Controller met domein:
-
-text
-Code kopiëren
-mydfir.local
-Maak in Active Directory Users and Computers de volgende objecten:
-
-OU IT → Gebruiker Jenny Smith (JSmith)
-
-OU HR → Gebruiker Terry Smith (TSmith)
-
-Voeg de Windows 10-client toe aan het domein mydfir.local.
-
-📸 Ref 5: Domeincontroller met gebruikers en OUs zichtbaar
-
-## Stap 5 – Aanvalssimulatie met Kali Linux
-Stel een statisch IP-adres in: 192.168.10.250.
-
-Installeer Crowbar:
-
-bash
-Code kopiëren
 sudo apt install crowbar -y
-Maak een bestand passwords.txt met 20 wachtwoorden + het echte wachtwoord van TSmith.
 
-Voer de brute-force uit:
+3: Maak passwords.txt en run:
 
-bash
-Code kopiëren
 crowbar -b rdp -u TSmith -C passwords.txt -s 192.168.10.11/32
-Bekijk in Splunk:
+Splunk-zoekvoorbeeld:
 
 spl
-Code kopiëren
 index=endpoint TSmith
-Controleer event IDs:
+# EventID 4625 = failed, 4624 = success
 
-4625 → Mislukte logins
-
-4624 → Geslaagde login
-
-📸 Ref 6: Splunk resultaten – EventID 4625 & 4624 zichtbaar
-
-## Stap 6 – Atomic Red Team (ATT&CK-simulatie)
-Open PowerShell als Administrator:
+## Stap 6 – Atomic Red Team
+In PowerShell (Admin):
 
 powershell
-Code kopiëren
+
 Set-ExecutionPolicy Bypass -Scope CurrentUser
-Voeg een antivirus-uitsluiting toe voor C:\.
-
-Installeer Atomic Red Team:
-
-powershell
-Code kopiëren
 IEX (IWR "https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/install.ps1" -UseBasicParsing)
-Install-AtomicRedTeam
-Voer een test uit (bijv. lokaal account aanmaken):
 
-powershell
-Code kopiëren
+Install-AtomicRedTeam 
 Invoke-AtomicTest T1136.001
-Controleer Splunk op detectie:
 
-spl
-Code kopiëren
+Controleer in Splunk:
+
 index=endpoint "new local user"
-📸 Ref 7: Voorbeeld Atomic Red Team testresultaten in Splunk
 
-🧾 Samenvatting
-✅ Voltooide onderdelen:
-Volledige labomgeving met 4 virtuele machines
+## Samenvatting
 
-Actieve AD-domeinstructuur
+Werkende AD + Splunk lab (4 VMs).
 
-Splunk ingest met Sysmon + Windows Event Logs
+Sysmon → Splunk ingest (index endpoint).
 
-Aanvalsdetectie via RDP brute force
-
-Atomic Red Team tests en zichtbaarheidstests
+RDP brute-force en Atomic-tests uitgevoerd en geanalyseerd.
