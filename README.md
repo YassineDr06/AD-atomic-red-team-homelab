@@ -69,10 +69,17 @@ Aangemaakt als `AD-Project` met IPv4-prefix `192.168.10.0/24` (DHCP ingeschakeld
   - **Ubuntu (Splunk)** — 2 CPU, 8 GB, 100 GB  
   - **Kali Linux** — OVA import
 
+<img width="847" height="929" alt="image" src="https://github.com/user-attachments/assets/b5ce187e-fc63-45b2-89ab-610b20506374" />
+
+
+
 ## Stap 2 – Splunk installeren
 - Installeer Ubuntu Server 22.04 en geef statisch IP `192.168.10.10`.  
 - Installeer Splunk (`.deb`) en open `http://192.168.10.10:8000`.  
 - Maak index `endpoint` aan en activeer receiving op poort `9997`.  
+
+<img width="894" height="398" alt="image" src="https://github.com/user-attachments/assets/1774430d-17b0-4b79-94a0-35b948b7da9e" />
+
 
 ## Stap 3 – Sysmon & Forwarder
 - Installeer Sysmon met `sysmon64.exe -i sysmonconfig.xml`.  
@@ -92,26 +99,38 @@ index = endpoint
 index = endpoint
 Herstart Splunk Forwarder.
 
+<img width="801" height="557" alt="image" src="https://github.com/user-attachments/assets/50b26d28-24a5-45a8-98ee-c009da52f9d4" />
+
 ## Stap 4 – Active Directory
 1: Stel DC IP in op 192.168.10.7.
 2: Installeer AD DS en promoteer naar domain controller mydfir.local.
 3: Maak OUs/users: IT\JSmith, HR\TSmith.
 4: Voeg in Windows 10 aan domein.
 
+<img width="897" height="731" alt="image" src="https://github.com/user-attachments/assets/1e60876b-26bc-4545-9f58-4662e88008c6" />
+
+
 ## Stap 5 – RDP brute-force (Kali)
-1: Stel Kali IP in: 192.168.10.250.
-2: Installeer Crowbar:
+1. Stel Kali IP in: `192.168.10.250`.  
+2. Installeer Hydra:
+   
+sudo apt install hydra -y
 
-sudo apt install crowbar -y
+Maak een wachtwoordlijst passwords.txt (bijv. 20 regels of gebruik een subset van rockyou.txt):
 
-3: Maak passwords.txt en run:
+voorbeeld: kopieer eerste 20 regels uit rockyou
+gunzip -c /usr/share/wordlists/rockyou.txt.gz | head -n 20 > passwords.txt
 
-crowbar -b rdp -u TSmith -C passwords.txt -s 192.168.10.11/32
-Splunk-zoekvoorbeeld:
+Voer Hydra uit voor 1 gebruiker (TSmith) en log resultaten:
 
-spl
-index=endpoint TSmith
-# EventID 4625 = failed, 4624 = success
+Hydra -l TSmith -P passwords.txt rdp://192.168.10.11 -t 4 -V -f -o hydra_rdp_results.tx
+
+<img width="716" height="825" alt="image" src="https://github.com/user-attachments/assets/f7df66ab-f347-4c38-aa08-09306a5f3d3e" />
+
+<img width="1006" height="743" alt="image" src="https://github.com/user-attachments/assets/07201b51-72df-45bf-93e6-4df5b7194cbd" />  hier zie je een failed login attempt
+
+<img width="1018" height="758" alt="image" src="https://github.com/user-attachments/assets/c40df8e6-cf37-4971-822f-5107867489a1" /> hier zie je een succesvolle login attempt door de Brute Force attack
+
 
 ## Stap 6 – Atomic Red Team
 In PowerShell (Admin):
@@ -124,9 +143,15 @@ IEX (IWR "https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/mas
 Install-AtomicRedTeam 
 Invoke-AtomicTest T1136.001
 
+<img width="945" height="778" alt="image" src="https://github.com/user-attachments/assets/448304fc-f2f1-4819-bbb6-49f9faeacb36" />
+
+
 Controleer in Splunk:
 
 index=endpoint "new local user"
+
+Ik vond niks en dat betekent dat er een gap zit met de huidige instellingen. Dat vind ik nou het leuke aan ART, je kan de gaps vinden in het monitoren. 
+
 
 ## Samenvatting
 
